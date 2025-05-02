@@ -1,6 +1,8 @@
-# Status Update
+## Status Update
 
-I'm finishing up the last month or so of university, so my progression will likely be non-existent on this. I suggest using the latest Dev tree build. 
+Abandoned: Between Orpheus not being a good fit, and other reasons I'm not working on this any longer. I'm keeping the repo up for others who wish to continue if any. 
+
+Try MiraiAssist instead. It is still a WIP. https://github.com/Nighthawk42/MiraiAssist 
 
 # ------------
 # mOrpheus Virtual Assistant Demo
