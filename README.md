@@ -1,55 +1,67 @@
-Amorfo - A Voice-Activated, Tool-Using Virtual Assistant
+Amorfo - A Voice-Powered, Tool-Using Virtual Assistant
+￼
+Table of Contents
+	•	Overview
+	•	Features
+	•	How It Works
+	•	Getting Started
+	•	Prerequisites
+	•	Configuration
+	•	Running with Docker (Recommended)
+	•	Running Locally
+	•	Contributing
+	•	License
+	•	Notice
 Overview
-Amorfo is an advanced, voice-powered virtual assistant built for real-world tasks, not just chat. It combines cutting-edge speech recognition, text generation, and text-to-speech (TTS) with a robust tool framework and long-term memory. Amorfo can search the web, browse sites, and learn over time.
+Amorfo is a sophisticated, voice-activated virtual assistant designed as a powerful real-world agent. It integrates advanced speech recognition, text generation, and TTS with a tool-using framework and long-term memory for complex tasks like web searching, browsing, and learning.
 Features
-	•	Voice Interaction:
-	◦	Speech-to-Text: Uses OpenAI’s Whisper for fast, accurate transcription.
-	◦	Text-to-Speech: High-quality AI TTS (via LM Studio) for natural responses.
-	◦	Activation: Supports hotword (“Hey Cassie”) or push-to-talk.
-	•	Flexible LLM Backends:
-	◦	Model-agnostic, supports OpenAI API-compatible models.
-	◦	Works with LM Studio or vLLM for easy switching.
-	•	Tool System:
-	◦	Agency: Uses tools to interact externally.
-	◦	Web Search: Integrates SearxNG for private searches.
-	◦	Web Browsing: Uses Playwright to navigate websites.
-	◦	Memory: Saves data to long-term memory.
+	•	Advanced Voice Interaction:
+	◦	Speech-to-Text: OpenAI’s Whisper for fast, accurate transcription.
+	◦	Text-to-Speech: High-quality AI TTS via LM Studio.
+	◦	Activation: Hotword (“Hey Cassie”) or push-to-talk.
+	•	Pluggable LLM Backends:
+	◦	Model-agnostic, supports OpenAI API format.
+	◦	Pre-configured for LM Studio and vLLM.
+	•	Extensible Tool System:
+	◦	Agency: Interact with external world via tools.
+	◦	Web Search: SearxNG for private searches.
+	◦	Web Browsing: Playwright to navigate sites.
+	◦	Memory Management: Save to long-term memory.
 	•	Long-Term Memory:
-	◦	Conversation Memory: Uses Redis for coherent multi-turn chats.
-	◦	Knowledge Base (RAG): Uses ChromaDB for persistent, semantic memory retrieval.
+	◦	Conversational Memory: Redis for multi-turn coherence.
+	◦	Knowledge Base (RAG): ChromaDB for persistent semantic retrieval.
 	•	Reproducibility:
-	◦	Dockerized: Includes Dockerfile for easy deployment.
+	◦	Dockerized: Dockerfile for easy deployment.
 How It Works
-Amorfo operates in a loop:
-	1	Activation: Detects hotword or keypress.
-	2	Listen & Transcribe: Records and transcribes audio with Whisper.
-	3	Think & Act:
-	◦	Recall: Retrieves context from Redis (conversation) and ChromaDB (knowledge).
-	◦	Process: LLM processes query with context.
-	◦	Tool Use: Optionally uses tools (e.g., web search) and feeds results back.
-	4	Respond: Generates text response.
-	5	Speak: Synthesizes and plays response.
-	6	Memorize: Saves conversation to Redis.
+Amorfo runs in a continuous loop:
+	1	Activation: Hotword or keypress.
+	2	Listen & Transcribe: Record and transcribe with Whisper.
+	3	Think & Act: a. Recall: From Redis (conversation) and ChromaDB (knowledge). b. Process: LLM with context. c. Tool Use: If needed (e.g., search), feed back output.
+	4	Respond: Generate response.
+	5	Speak: Synthesize and play.
+	6	Memorize: Save to Redis.
 Getting Started
 Prerequisites
 	•	OpenAI-compatible LLM endpoint (vLLM or LM Studio).
 	•	Redis for memory.
-	•	SearxNG (optional, for web search).
+	•	SearxNG (optional for search).
 Configuration
-	1	Create settings.yml from example.
-	2	Update with LLM, Redis, and SearxNG URLs/ports.
-	3	Set llm_client to "vllm" or "lmstudio" in settings.yml.
-Docker (Recommended)
+	1	Copy settings.yml (use example as start).
+	2	Update with URLs/ports for LLM, Redis, SearxNG.
+	3	Set llm_client to "vllm" or "lmstudio".
+Running with Docker (Recommended)
 	1	Build image: docker build -t amorfo-assistant .
 	2	
-	3	Run container: docker run --rm -it --net=host -v ./outputs:/usr/src/app/outputs amorfo-assistant
+	3	Run: docker run --rm -it --net=host -v ./outputs:/usr/src/app/outputs amorfo-assistant
 	4	
-Local Run
-	1	Install dependencies: pip install -r requirements.txt
+Running Locally
+	1	Install: pip install -r requirements.txt
 	2	playwright install --with-deps
 	3	
 	4	Run: python amorfo.py
 	5	
+Contributing
+Fork, create branch, commit changes, pull request. Issues welcome.
 License
 MIT License. See LICENSE.
 Notice
