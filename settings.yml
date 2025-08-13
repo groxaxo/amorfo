@@ -14,7 +14,26 @@ lm:
   chat:
     endpoint: "/chat/completions"       # API endpoint for chat-based text generation.
     model: "gemma-3-12b-it"             # Model identifier for chat generation.
-    system_prompt: "You are a helpful assistant."  # System prompt to set the context.
+    system_prompt: |
+      You are a helpful assistant with access to the following tools:
+
+      - `searx_search(query: str)`: Searches the web for the given query using SearxNG.
+      - `get_website_content(url: str)`: Fetches the text content of a website.
+      - `save_to_memory(document: str)`: Saves a document to your long-term memory.
+
+      To use a tool, respond with a JSON object with the following format:
+      {
+        "tool": "tool_name",
+        "tool_input": "input for the tool"
+      }
+
+      For example, to search for "latest news", you would respond with:
+      {
+        "tool": "searx_search",
+        "tool_input": "latest news"
+      }
+
+      If you don't need to use a tool, respond normally.
     max_tokens: 256                     # Increased for more coherent responses.
     temperature: 0.7                    # Sampling temperature; controls randomness.
     top_p: 0.9                          # Top-p (nucleus sampling) value.
@@ -31,6 +50,41 @@ lm:
     repetition_penalty: 1.0             # Penalty to prevent repetitive TTS output.
     speed: 1.0                          # More natural speed.
     max_segment_duration: 20            # Increased maximum seconds per TTS segment.
+
+# -------------------------------
+# Configuration for vLLM
+# -------------------------------
+vllm:
+  api_url: "http://127.0.0.1:8000/v1"  # Base URL for the vLLM inference server.
+
+  chat:
+    endpoint: "/chat/completions"       # API endpoint for chat-based text generation.
+    model: "meta-llama/Meta-Llama-3-8B-Instruct" # Model identifier for chat generation.
+    system_prompt: |
+      You are a helpful assistant with access to the following tools:
+
+      - `searx_search(query: str)`: Searches the web for the given query using SearxNG.
+      - `get_website_content(url: str)`: Fetches the text content of a website.
+      - `save_to_memory(document: str)`: Saves a document to your long-term memory.
+
+      To use a tool, respond with a JSON object with the following format:
+      {
+        "tool": "tool_name",
+        "tool_input": "input for the tool"
+      }
+
+      For example, to search for "latest news", you would respond with:
+      {
+        "tool": "searx_search",
+        "tool_input": "latest news"
+      }
+
+      If you don't need to use a tool, respond normally.
+    max_tokens: 256                     # Increased for more coherent responses.
+    temperature: 0.7                    # Sampling temperature; controls randomness.
+    top_p: 0.9                          # Top-p (nucleus sampling) value.
+    repetition_penalty: 1.1             # Penalty factor to reduce repetitive outputs.
+    max_response_time: 10.0             # Increased timeout (in seconds) for slower responses.
 
 # -------------------------------
 # TTS Audio Output Configuration
@@ -86,3 +140,23 @@ speech:
 interaction:
   mode: "both"              # Options: "push_to_talk", "hotword", or "both" to enable both simultaneously.
   post_audio_delay: 0.5     # Delay (in seconds) after audio playback before next activation.
+
+# -------------------------------
+# Assistant Configuration
+# -------------------------------
+assistant:
+  llm_client: "vllm"  # Options: "vllm", "lmstudio"
+
+# -------------------------------
+# Memory Configuration
+# -------------------------------
+memory:
+  redis:
+    host: "localhost"
+    port: 6379
+    db: 0
+    conversation_limit: 10
+  chromadb:
+    path: "chroma_db"
+    collection_name: "documents"
+    search_results: 3

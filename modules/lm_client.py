@@ -5,11 +5,13 @@ import json
 import wave
 import requests
 import re
+import asyncio
 from typing import Optional
 from modules.logging import logger
 from modules.audio import segment_text, combine_audio_files
 from modules.snac_decoder import tokens_decoder_sync
 from modules.config import load_config
+from modules.tools import get_website_content, searx_search
 
 def clean_text_for_tts(text: str) -> str:
     """
@@ -29,8 +31,9 @@ def clean_text_for_tts(text: str) -> str:
     return text.strip()
 
 class LMStudioClient:
-    def __init__(self, config):
+    def __init__(self, config, tools=None):
         self.config = config
+        self.tools = tools
         lm_config = config["lm"]
 
         self.api_url = lm_config["api_url"]
@@ -65,11 +68,7 @@ class LMStudioClient:
         # Use a session for connection pooling
         self.session = requests.Session()
 
-    def chat(self, user_input: str) -> str:
-        messages = [
-            {"role": "system", "content": self.system_prompt},
-            {"role": "user", "content": user_input}
-        ]
+    def _call_llm(self, messages: list) -> str:
         payload = {
             "model": self.chat_model,
             "messages": messages,
@@ -118,6 +117,39 @@ class LMStudioClient:
                 time.sleep(delay)
                 if attempt == self.retries - 1:
                     return "I'm having trouble responding right now. Please try again later."
+        return "I'm having trouble responding right now. Please try again later."
+
+    def chat(self, user_input: str) -> str:
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": user_input}
+        ]
+
+        response_text = self._call_llm(messages)
+
+        try:
+            tool_call = json.loads(response_text)
+            if isinstance(tool_call, dict) and "tool" in tool_call and "tool_input" in tool_call:
+                tool_name = tool_call["tool"]
+                tool_input = tool_call["tool_input"]
+                logger.info(f"LLM requested to use tool: {tool_name} with input: {tool_input}")
+
+                if tool_name == "searx_search":
+                    tool_result = searx_search(tool_input)
+                elif tool_name == "get_website_content":
+                    tool_result = asyncio.run(get_website_content(tool_input))
+                else:
+                    tool_result = f"Unknown tool: {tool_name}"
+
+                messages.append({"role": "assistant", "content": response_text})
+                messages.append({"role": "user", "content": f"The tool {tool_name} returned the following content:\n{tool_result}"})
+
+                final_response = self._call_llm(messages)
+                return final_response
+            else:
+                return response_text
+        except json.JSONDecodeError:
+            return response_text
 
     def synthesize_speech(self, text: str, voice: Optional[str] = None, output_file: Optional[str] = None) -> str:
         voice = voice if voice else self.default_voice
@@ -216,3 +248,116 @@ class LMStudioClient:
             except Exception as e:
                 logger.warning("Could not remove temporary file %s: %s", f, str(e))
         return combined_filename
+
+class VLLMClient:
+    def __init__(self, config, tools=None):
+        self.config = config
+        self.tools = tools
+        vllm_config = config["vllm"]
+
+        self.api_url = vllm_config["api_url"]
+        self.chat_endpoint = vllm_config["chat"]["endpoint"]
+
+        # Chat parameters
+        chat_config = vllm_config["chat"]
+        self.chat_model = chat_config["model"]
+        self.system_prompt = chat_config["system_prompt"]
+        self.chat_max_tokens = chat_config["max_tokens"]
+        self.chat_temperature = chat_config["temperature"]
+        self.chat_top_p = chat_config["top_p"]
+        self.chat_repetition_penalty = chat_config["repetition_penalty"]
+        self.max_response_time = chat_config["max_response_time"]
+
+        self.headers = {"Content-Type": "application/json"}
+        self.retries = config["speech"]["max_retries"]
+
+        # Use a session for connection pooling
+        self.session = requests.Session()
+
+    def _call_llm(self, messages: list) -> str:
+        payload = {
+            "model": self.chat_model,
+            "messages": messages,
+            "max_tokens": self.chat_max_tokens,
+            "temperature": self.chat_temperature,
+            "top_p": self.chat_top_p,
+            "repetition_penalty": self.chat_repetition_penalty,
+            "stream": False
+        }
+        url = self.api_url + self.chat_endpoint
+        logger.debug("Chat request payload: %s", payload)
+        for attempt in range(self.retries):
+            try:
+                start_time = time.time()
+                response = self.session.post(
+                    url,
+                    headers=self.headers,
+                    json=payload,
+                    timeout=self.max_response_time
+                )
+                elapsed = time.time() - start_time
+                logger.info("Chat response received in %.2f seconds", elapsed)
+                logger.debug("vLLM full response: %s", response.text)
+                if response.status_code != 200:
+                    logger.error("Chat API error: %s %s", response.status_code, response.text)
+                    if attempt < self.retries - 1:
+                        delay = 2 ** attempt
+                        logger.warning("Chat API error, retrying in %d seconds...", delay)
+                        time.sleep(delay)
+                        continue
+                    raise RuntimeError(f"Chat API error: {response.status_code} {response.text}")
+                data = response.json()
+                generated_text = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+                token_count = len(generated_text.split()) * 1.33
+                logger.info("Generated %d tokens: %s", int(token_count), generated_text[:50])
+                return generated_text
+            except requests.exceptions.Timeout:
+                delay = 2 ** attempt
+                logger.warning("Chat API timeout (attempt %d), retrying in %d seconds", attempt + 1, delay)
+                time.sleep(delay)
+                if attempt == self.retries - 1:
+                    return "I need more time to think about that. Could you ask again?"
+            except Exception as e:
+                delay = 2 ** attempt
+                logger.error("Chat API failed (attempt %d): %s", attempt + 1, str(e))
+                time.sleep(delay)
+                if attempt == self.retries - 1:
+                    return "I'm having trouble responding right now. Please try again later."
+        return "I'm having trouble responding right now. Please try again later."
+
+    def chat(self, user_input: str) -> str:
+        messages = [
+            {"role": "system", "content": self.system_prompt},
+            {"role": "user", "content": user_input}
+        ]
+
+        response_text = self._call_llm(messages)
+
+        try:
+            tool_call = json.loads(response_text)
+            if isinstance(tool_call, dict) and "tool" in tool_call and "tool_input" in tool_call:
+                tool_name = tool_call["tool"]
+                tool_input = tool_call["tool_input"]
+                logger.info(f"LLM requested to use tool: {tool_name} with input: {tool_input}")
+
+                if self.tools:
+                    if tool_name == "searx_search":
+                        tool_result = self.tools.searx_search(tool_input)
+                    elif tool_name == "get_website_content":
+                        tool_result = asyncio.run(self.tools.get_website_content(tool_input))
+                    elif tool_name == "save_to_memory":
+                        tool_result = self.tools.save_to_memory(tool_input)
+                    else:
+                        tool_result = f"Unknown tool: {tool_name}"
+                else:
+                    tool_result = "Tools are not available."
+
+                messages.append({"role": "assistant", "content": response_text})
+                messages.append({"role": "user", "content": f"The tool {tool_name} returned the following content:\n{tool_result}"})
+
+                final_response = self._call_llm(messages)
+                return final_response
+            else:
+                return response_text
+        except json.JSONDecodeError:
+            return response_text
