@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  assistant:
+    build: .
+    container_name: amorfo_assistant
+    depends_on:
+      - redis
+      - searxng
+      - vllm
+    volumes:
+      - ./outputs:/usr/src/app/outputs
+      - ./settings.docker.yml:/usr/src/app/settings.yml
+    # Host network mode is used for simplicity to allow access to host audio devices
+    # and services like a local LM Studio TTS server.
+    network_mode: "host"
+    # To use audio devices inside the container, you might need to add:
+    # devices:
+    #   - "/dev/snd:/dev/snd"
+    # This requires the user to be in the 'audio' group on the host.
+
+  redis:
+    image: redis:alpine
+    container_name: amorfo_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: amorfo_searxng
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./searxng:/etc/searxng:ro
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8888/
+    restart: unless-stopped
+
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: amorfo_vllm
+    ports:
+      - "8000:8000"
+    environment:
+      # This is the model the vLLM server will serve.
+      # Make sure you have access to it from the Hugging Face Hub.
+      # You might need to run 'huggingface-cli login' on your host machine.
+      - MODEL=meta-llama/Meta-Llama-3-8B-Instruct
+      # The following arguments are passed to vllm
+      - VLLM_ARGS=--host 0.0.0.0 --port 8000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+    driver: local

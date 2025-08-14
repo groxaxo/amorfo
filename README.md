@@ -1,68 +1,142 @@
-Amorfo - A Voice-Powered, Tool-Using Virtual Assistant
-￼
-Table of Contents
-	•	Overview
-	•	Features
-	•	How It Works
-	•	Getting Started
-	•	Prerequisites
-	•	Configuration
-	•	Running with Docker (Recommended)
-	•	Running Locally
-	•	Contributing
-	•	License
-	•	Notice
-Overview
-Amorfo is a sophisticated, voice-activated virtual assistant designed as a powerful real-world agent. It integrates advanced speech recognition, text generation, and TTS with a tool-using framework and long-term memory for complex tasks like web searching, browsing, and learning.
-Features
-	•	Advanced Voice Interaction:
-	◦	Speech-to-Text: OpenAI’s Whisper for fast, accurate transcription.
-	◦	Text-to-Speech: High-quality AI TTS via LM Studio.
-	◦	Activation: Hotword (“Hey Cassie”) or push-to-talk.
-	•	Pluggable LLM Backends:
-	◦	Model-agnostic, supports OpenAI API format.
-	◦	Pre-configured for LM Studio and vLLM.
-	•	Extensible Tool System:
-	◦	Agency: Interact with external world via tools.
-	◦	Web Search: SearxNG for private searches.
-	◦	Web Browsing: Playwright to navigate sites.
-	◦	Memory Management: Save to long-term memory.
-	•	Long-Term Memory:
-	◦	Conversational Memory: Redis for multi-turn coherence.
-	◦	Knowledge Base (RAG): ChromaDB for persistent semantic retrieval.
-	•	Reproducibility:
-	◦	Dockerized: Dockerfile for easy deployment.
-How It Works
-Amorfo runs in a continuous loop:
-	1	Activation: Hotword or keypress.
-	2	Listen & Transcribe: Record and transcribe with Whisper.
-	3	Think & Act: a. Recall: From Redis (conversation) and ChromaDB (knowledge). b. Process: LLM with context. c. Tool Use: If needed (e.g., search), feed back output.
-	4	Respond: Generate response.
-	5	Speak: Synthesize and play.
-	6	Memorize: Save to Redis.
-Getting Started
-Prerequisites
-	•	OpenAI-compatible LLM endpoint (vLLM or LM Studio).
-	•	Redis for memory.
-	•	SearxNG (optional for search).
-Configuration
-	1	Copy settings.yml (use example as start).
-	2	Update with URLs/ports for LLM, Redis, SearxNG.
-	3	Set llm_client to "vllm" or "lmstudio".
-Running with Docker (Recommended)
-	1	Build image: docker build -t amorfo-assistant .
-	2	
-	3	Run: docker run --rm -it --net=host -v ./outputs:/usr/src/app/outputs amorfo-assistant
-	4	
-Running Locally
-	1	Install: pip install -r requirements.txt
-	2	playwright install --with-deps
-	3	
-	4	Run: python amorfo.py
-	5	
-Contributing
-Fork, create branch, commit changes, pull request. Issues welcome.
-License
-MIT License. See LICENSE.
-Notice
-See NOTICE.
+# amorfo - A Voice-Powered, Tool-Using Virtual Assistant
+
+## Overview
+
+amorfo is a sophisticated, voice-activated virtual assistant designed to be a powerful, real-world agent, not just a chatbot. It integrates state-of-the-art speech recognition, text generation, and text-to-speech (TTS) synthesis with a powerful tool-using framework and long-term memory capabilities. This allows amorfo to perform complex tasks, such as searching the web, browsing websites, and learning new information over time.
+
+## Features
+
+- **Advanced Voice Interaction:**
+  - **Speech-to-Text:** Utilizes OpenAI's `Whisper` for fast and accurate transcription.
+  - **Text-to-Speech:** Employs a high-quality, AI-based TTS engine (via LM Studio) for natural-sounding responses.
+  - **Activation:** Supports both hotword detection ("Hey Cassie") and push-to-talk for flexible interaction.
+
+- **Pluggable LLM Backends:**
+  - Designed to be model-agnostic. Supports any model compatible with the OpenAI API format.
+  - Pre-configured to work with both `LM Studio` and `vLLM`, allowing you to easily switch between local LLM providers.
+
+- **Extensible Tool System:**
+  - **Agency:** amorfo can use tools to interact with the external world.
+  - **Web Search:** Integrated with `SearxNG` to perform private, real-time web searches.
+  - **Web Browsing:** Uses `Playwright` to navigate and read the content of websites.
+  - **Memory Management:** Can save information to its long-term memory.
+
+- **Long-Term Memory:**
+  - **Conversational Memory:** Uses `Redis` to maintain session history, allowing for coherent, multi-turn conversations.
+  - **Knowledge Base (RAG):** Integrated with `ChromaDB` to create a persistent, semantic knowledge base. The assistant can retrieve relevant information from this memory before responding.
+
+- **Reproducibility:**
+  - **Dockerized:** Comes with a `Dockerfile` for easy and reproducible deployment.
+
+## How It Works
+
+The assistant operates in a continuous loop:
+
+1.  **Activation:** Waits for a hotword or keypress.
+2.  **Listen & Transcribe:** Records audio and uses Whisper to get a text transcript.
+3.  **Think & Act:**
+    a.  **Recall:** Retrieves relevant information from its Redis (conversation) and ChromaDB (knowledge) memory stores.
+    b.  **Process:** The language model processes the user's query along with the retrieved context.
+    c.  **Tool Use:** If necessary, the LLM can decide to use a tool (e.g., search the web). The tool's output is then fed back to the LLM.
+4.  **Respond:** The final response is generated by the LLM.
+5.  **Speak:** The text response is synthesized into speech and played back to the user.
+6.  **Memorize:** The new conversation turn is saved to the Redis memory.
+
+## Getting Started
+
+### Prerequisites
+
+You need to have the following services running and accessible to the assistant:
+
+-   **An OpenAI-compatible LLM endpoint:**
+    -   **vLLM:** Recommended for high-performance inference.
+    -   **LM Studio:** For running local GGUF models.
+-   **Redis:** For conversational memory.
+-   **SearxNG:** (Optional, for web search) A private search engine instance.
+
+### Configuration
+
+1.  **Copy `settings.yml`:** If it doesn't exist, create a `settings.yml` file. You can use the example in the old README as a starting point.
+2.  **Configure Endpoints:** Update `settings.yml` with the correct URLs and ports for your LLM, Redis, and SearxNG services.
+3.  **Choose a Client:** In `settings.yml`, under the `assistant` section, set `llm_client` to either `"vllm"` or `"lmstudio"` depending on your setup.
+
+## Deployment
+
+There are two ways to run the application using Docker.
+
+### Option 1: Running the Assistant as a Standalone Docker Container
+
+This method is suitable if you are running the other services (vLLM, Redis, etc.) separately.
+
+1.  **Build the Docker image:**
+    ```bash
+    docker build -t amorfo-assistant .
+    ```
+
+2.  **Run the Docker container:**
+    You need to mount the `outputs` directory to be able to access the generated TTS files. You also need to run the container with `--net=host` to allow it to access services running on your host machine.
+    ```bash
+    docker run --rm -it --net=host -v ./outputs:/usr/src/app/outputs amorfo-assistant
+    ```
+
+### Option 2: Running the Entire Stack with Docker Compose (Recommended)
+
+This is the easiest way to get started. It runs the assistant and all its required services (vLLM, Redis, SearxNG) with a single command.
+
+**Prerequisites:**
+-   [Docker](https://docs.docker.com/get-docker/)
+-   [Docker Compose](https://docs.docker.com/compose/install/)
+-   For GPU acceleration with vLLM:
+    -   An NVIDIA GPU with the appropriate drivers.
+    -   The [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+
+**Setup:**
+
+1.  **Hugging Face Authentication:**
+    The `vllm` service in the `docker-compose.yml` file needs to download a model from the Hugging Face Hub. If the model is gated (like Llama 3), you need to authenticate. Run the following command on your host machine *before* starting the services:
+    ```bash
+    huggingface-cli login
+    ```
+    This will save an authentication token that Docker can use.
+
+2.  **SearxNG Configuration:**
+    Create a directory named `searxng` in the root of the project.
+    ```bash
+    mkdir searxng
+    ```
+    You need to place a `settings.yml` file inside this directory for SearxNG. For a default configuration, you can refer to the [official SearxNG documentation](https://docs.searxng.org/admin/settings.html). A minimal `settings.yml` would be just an empty file, but you might want to configure search engines.
+
+3.  **Run the services:**
+    ```bash
+    docker-compose up -d
+    ```
+    This will start all the services in the background. To view the logs, you can run:
+    ```bash
+    docker-compose logs -f assistant
+    ```
+
+4.  **Stopping the services:**
+    ```bash
+    docker-compose down
+    ```
+
+### Option 3: Running Locally
+
+1.  **Install dependencies:**
+    ```bash
+    pip install -r requirements.txt
+    playwright install --with-deps
+    ```
+
+2.  **Run the assistant:**
+    ```bash
+    python amorfo.py
+    ```
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Notice
+
+See the [NOTICE](NOTICE) file for details.

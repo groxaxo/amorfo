@@ -28,4 +28,4 @@ RUN playwright install --with-deps
 COPY . .
 
 # Command to run the application
-CMD ["python", "morpheus.py"]
+CMD ["python", "amorfo.py"]
