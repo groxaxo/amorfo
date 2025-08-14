@@ -43,6 +43,16 @@ This project implements the mOrpheus Virtual Assistant, which integrates speech 
 
 ## Setup
 
+This project uses Docker and Docker Compose to simplify the installation process. An interactive installer is provided to guide you through the setup.
+
+### Prerequisites
+
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker Compose](https://docs.docker.com/compose/install/)
+- [LM Studio](https://lmstudio.ai/)
+
+### Installation
+
 1. **Clone the repository:**
 
    ```bash
@@ -50,120 +60,33 @@ This project implements the mOrpheus Virtual Assistant, which integrates speech 
    cd morpheus-virtual-assistant
    ```
 
-2. **Install the dependencies:**
+2. **Install installer dependencies:**
 
    ```bash
-   pip install -r requirements.txt
+   pip install -r requirements-installer.txt
    ```
 
-   *Ensure that your `requirements.txt` includes all required packages.*
-
-3. **Configure the application:**
-
-   - Create a `settings.yml` file in the project root.
-   - Populate it with your configuration details for Whisper, LM Studio API, audio settings, interaction mode, etc.
-
-   Example `settings.yml`:
-
-   ```yaml
-   # -------------------------------
-   # Configuration for Whisper STT
-   # -------------------------------
-   whisper:
-     model: "small.en"
-     sample_rate: 16000
-
-   # -------------------------------
-   # Configuration for LM Studio (Chat & TTS)
-   # -------------------------------
-   lm:
-     api_url: "http://127.0.0.1:1234/v1"
-     
-     chat:
-       endpoint: "/chat/completions"
-       model: "gemma-3-12b-it"
-       system_prompt: "You are a helpful assistant."
-       max_tokens: 256
-       temperature: 0.7
-       top_p: 0.9
-       repetition_penalty: 1.1
-       max_response_time: 10.0
-
-     tts:
-       endpoint: "/completions"
-       model: "orpheus-3b-ft.gguf@q2_k"
-       default_voice: "tara"
-       max_tokens: 4096
-       temperature: 0.6
-       top_p: 0.9
-       repetition_penalty: 1.0
-       speed: 1.0
-       max_segment_duration: 20
-
-   # -------------------------------
-   # TTS Audio Output Configuration
-   # -------------------------------
-   tts:
-     sample_rate: 24000
-
-   # -------------------------------
-   # Audio Device Configuration
-   # -------------------------------
-   audio:
-     input_device: null
-     output_device: null
-     hotword_sample_rate: 16000
-
-   # -------------------------------
-   # Voice Activity Detection (VAD) Configuration
-   # -------------------------------
-   vad:
-     mode: 2
-     frame_duration_ms: 30
-     silence_threshold_ms: 1000
-     min_record_time_ms: 2000
-
-   # -------------------------------
-   # Hotword Detection Configuration
-   # -------------------------------
-   hotword:
-     enabled: true
-     phrase: "Hey Assistant"
-     sensitivity: 0.7
-     timeout_sec: 5
-     retries: 3
-
-   # -------------------------------
-   # Segmentation Configuration for TTS
-   # -------------------------------
-   segmentation:
-     max_words: 60
-
-   # -------------------------------
-   # Speech Quality Configuration
-   # -------------------------------
-   speech:
-     normalize_audio: false
-     default_pitch: 0
-     min_speech_confidence: 0.5
-     max_retries: 3
-
-   # -------------------------------
-   # Interaction Configuration
-   # -------------------------------
-   interaction:
-     mode: "both"  # Options: "push_to_talk", "hotword", or "both"
-     post_audio_delay: 0.5
-   ```
-
-4. **Run LM Studio**
-Before activating the assistant you need to have LM Studio running both the LLM and Orpheus model as defined in the settings.yml in API mode. This is only accessibly in Power User or Developer Mode respectively.
-
-5. **Run the Assistant:**
+3. **Run the interactive installer:**
 
    ```bash
-   python morpheus.py
+   python install.py
    ```
+
+   The installer will:
+   - Check for Docker and Docker Compose.
+   - Guide you through configuring the `settings.yml` file.
+   - Help you select your audio input and output devices.
+
+3. **Run LM Studio**
+   Before starting the assistant, you must have LM Studio running with the required LLM and TTS models loaded and the API server started.
+
+4. **Run the Assistant:**
+
+   ```bash
+   docker-compose up --build
+   ```
+
+   This command will build the Docker image and start the mOrpheus virtual assistant.
 
 
 ## Suggested Models
