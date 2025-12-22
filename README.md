@@ -200,3 +200,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Notice
 
 See the [NOTICE](NOTICE) file for details.
+
+## Donations
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/P5P21QRW51)
