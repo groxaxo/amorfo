@@ -50,7 +50,7 @@ audio:
 # Voice Activity Detection (VAD) Configuration
 # -------------------------------
 vad:
-  provider: "silero"          # Required VAD provider.
+  provider: "silero"          # Default/recommended VAD provider.
   mode: 2                     # VAD aggressiveness (0 is least, 3 is most aggressive).
   speech_threshold: 0.5       # Probability threshold for classifying a frame as speech.
   frame_duration_ms: 30       # Duration of each audio frame (in ms) for VAD analysis.

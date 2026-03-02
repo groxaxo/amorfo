@@ -28,8 +28,7 @@ def _get_silero_vad_model():
     if _SILERO_VAD_MODEL is None:
         _SILERO_VAD_MODEL, _ = torch.hub.load(
             repo_or_dir="snakers4/silero-vad",
-            model="silero_vad",
-            trust_repo=False
+            model="silero_vad"
         )
     return _SILERO_VAD_MODEL
 
