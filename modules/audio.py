@@ -7,6 +7,7 @@ import sounddevice as sd
 import torch
 from scipy.io.wavfile import write as wav_write
 from modules.logging import logger
+from modules.config import load_config
 
 # Default parameters (can be overridden via configuration)
 VAD_MODE = 2
@@ -16,13 +17,19 @@ MIN_RECORD_TIME_MS = 2000
 DEFAULT_MAX_WORDS_PER_SEGMENT = 60
 _SILERO_VAD_MODEL = None
 
+def _get_vad_speech_threshold():
+    try:
+        return float(load_config().get("vad", {}).get("speech_threshold", 0.5))
+    except Exception:
+        return 0.5
+
 def _get_silero_vad_model():
     global _SILERO_VAD_MODEL
     if _SILERO_VAD_MODEL is None:
         _SILERO_VAD_MODEL, _ = torch.hub.load(
             repo_or_dir="snakers4/silero-vad",
             model="silero_vad",
-            trust_repo=True
+            trust_repo=False
         )
     return _SILERO_VAD_MODEL
 
@@ -32,6 +39,7 @@ def record_until_silence(sample_rate, device=None):
     """
     try:
         vad_model = _get_silero_vad_model()
+        speech_threshold = _get_vad_speech_threshold()
         frame_length = int(sample_rate * FRAME_DURATION_MS / 1000)
         silence_frames = int(SILENCE_THRESHOLD_MS / FRAME_DURATION_MS)
         logger.info("Recording until %d ms of silence is detected...", SILENCE_THRESHOLD_MS)
@@ -44,7 +52,7 @@ def record_until_silence(sample_rate, device=None):
                 frame, _ = stream.read(frame_length)
                 frame_tensor = torch.from_numpy(np.squeeze(frame)).float()
                 speech_prob = vad_model(frame_tensor, sample_rate).item()
-                is_speech = speech_prob >= 0.5
+                is_speech = speech_prob >= speech_threshold
                 recorded_frames.append(frame)
                 if not is_speech:
                     consecutive_silence += 1

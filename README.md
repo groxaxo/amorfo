@@ -137,10 +137,11 @@ The project direction is now:
    # -------------------------------
    # Voice Activity Detection (VAD) Configuration
    # -------------------------------
-   vad:
+    vad:
       provider: "silero"
       mode: 2
-     frame_duration_ms: 30
+      speech_threshold: 0.5
+      frame_duration_ms: 30
      silence_threshold_ms: 1000
      min_record_time_ms: 2000
 

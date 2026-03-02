@@ -168,6 +168,7 @@ class LMStudioClient:
                     if attempt == self.retries - 1:
                         raise
 
+        # Legacy token-stream backends (for example Orpheus-compatible APIs).
         prompt = f"<|audio|>{voice}: {cleaned_text}<|eot_id|>"
         payload = {
             "model": self.tts_model,
