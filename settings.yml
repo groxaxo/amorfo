@@ -6,14 +6,14 @@ whisper:
   sample_rate: 16000       # Audio sample rate (in Hz) for recording and transcription.
 
 # -------------------------------
-# Configuration for LM Studio (Chat & TTS)
+# Configuration for vLLM + Parakeet (Chat + TTS)
 # -------------------------------
 lm:
-  api_url: "http://127.0.0.1:1234/v1"  # Base URL for the LM Studio inference server.
+  api_url: "http://127.0.0.1:8000/v1"  # Base URL for OpenAI-compatible inference endpoints (vLLM/Parakeet).
   
   chat:
     endpoint: "/chat/completions"       # API endpoint for chat-based text generation.
-    model: "gemma-3-12b-it"             # Model identifier for chat generation.
+    model: "meta-llama/Llama-3.1-8B-Instruct"  # Model identifier for vLLM chat generation.
     system_prompt: "You are a helpful assistant."  # System prompt to set the context.
     max_tokens: 256                     # Increased for more coherent responses.
     temperature: 0.7                    # Sampling temperature; controls randomness.
@@ -22,9 +22,9 @@ lm:
     max_response_time: 10.0             # Increased timeout (in seconds) for slower responses.
 
   tts:
-    endpoint: "/completions"            # API endpoint for text-to-speech synthesis.
-    model: "orpheus-3b-ft.gguf@q2_k"    # Model identifier for TTS synthesis.
-    default_voice: "tara"               # Default voice for TTS output.
+    endpoint: "/audio/speech"           # API endpoint for text-to-speech synthesis.
+    model: "parakeet-tts-0.3-multilingual"  # Model identifier for Parakeet TTS synthesis.
+    default_voice: "alloy"              # Default voice for TTS output.
     max_tokens: 4096                    # Optimal for Orpheus.
     temperature: 0.6                    # Sampling temperature for TTS.
     top_p: 0.9                          # Top-p sampling value for TTS generation.
@@ -50,6 +50,7 @@ audio:
 # Voice Activity Detection (VAD) Configuration
 # -------------------------------
 vad:
+  provider: "silero"          # Required VAD provider.
   mode: 2                     # VAD aggressiveness (0 is least, 3 is most aggressive).
   frame_duration_ms: 30       # Duration of each audio frame (in ms) for VAD analysis.
   silence_threshold_ms: 1000  # Duration (in ms) of consecutive silence to stop recording.

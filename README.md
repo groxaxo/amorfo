@@ -7,11 +7,31 @@ Try MiraiAssist instead. It is still a WIP. https://github.com/Nighthawk42/Mirai
 # ------------
 # mOrpheus Virtual Assistant Demo
 
-This project implements the mOrpheus Virtual Assistant, which integrates speech recognition, text generation, and text-to-speech (TTS) synthesis. The assistant leverages several state-of-the-art components:
+This project implements the mOrpheus Virtual Assistant, which integrates speech recognition, text generation, and text-to-speech (TTS) synthesis. The assistant is being modernized around:
 
 - **Whisper** for speech recognition.
-- **LM Studio API** for both text generation (chat) and text-to-speech synthesis.
-- **SNAC-based decoder** to convert TTS token streams into PCM audio.
+- **Silero VAD** for robust voice-activity detection.
+- **vLLM** for low-latency LLM serving.
+- **Parakeet TTS 0.3 multilingual** for multilingual speech synthesis.
+
+## Bottlenecks and Improvement Plan
+
+### Current bottlenecks
+- **Single-backend coupling:** chat and TTS are currently tied to one backend API shape.
+- **VAD accuracy/runtime tradeoff:** the previous WebRTC-based VAD can miss softer speech in real-world environments.
+- **Limited UX/project page clarity:** repository documentation does not clearly present architecture, roadmap, and frontend direction.
+- **Monolithic runtime flow:** audio capture, inference calls, and playback happen in a tightly sequential loop.
+
+### Required target stack
+The project direction is now:
+1. **Silero VAD** for speech boundary detection.
+2. **Parakeet TTS 0.3 multilingual** for speech synthesis.
+3. **vLLM** for LLM deployment and chat completions.
+
+### Frontend and project-page improvements
+- Add a lightweight web UI (session transcript, latency cards, model/runtime status, push-to-talk button).
+- Expose a small backend API boundary (`/stt`, `/chat`, `/tts`, `/health`) so UI and voice loop can evolve independently.
+- Keep this README as the project page with a clear architecture section, migration checklist, and performance goals.
 
 ## Features
 
@@ -19,10 +39,10 @@ This project implements the mOrpheus Virtual Assistant, which integrates speech 
   Captures audio from the microphone and transcribes it using the Whisper model.
 
 - **Text Generation:**  
-  Uses LM Studio’s chat API to generate natural language responses based on transcribed input.
+  Uses a vLLM OpenAI-compatible endpoint to generate natural language responses based on transcribed input.
 
 - **Text-to-Speech:**  
-  Converts the generated text into speech via LM Studio’s TTS API. The text is cleaned (removing newlines, markdown symbols, and emojis) before being sent to the TTS engine, and the resulting token stream is decoded using a SNAC-based decoder.
+  Converts generated text into speech with Parakeet TTS 0.3 multilingual.
   
 
 - **Audio Playback & Activation:**  
@@ -61,7 +81,7 @@ This project implements the mOrpheus Virtual Assistant, which integrates speech 
 3. **Configure the application:**
 
    - Create a `settings.yml` file in the project root.
-   - Populate it with your configuration details for Whisper, LM Studio API, audio settings, interaction mode, etc.
+   - Populate it with your configuration details for Whisper, vLLM API, Parakeet TTS, audio settings, and interaction mode.
 
    Example `settings.yml`:
 
@@ -74,14 +94,14 @@ This project implements the mOrpheus Virtual Assistant, which integrates speech 
      sample_rate: 16000
 
    # -------------------------------
-   # Configuration for LM Studio (Chat & TTS)
+    # Configuration for vLLM + Parakeet services
    # -------------------------------
    lm:
-     api_url: "http://127.0.0.1:1234/v1"
+      api_url: "http://127.0.0.1:8000/v1"
      
      chat:
        endpoint: "/chat/completions"
-       model: "gemma-3-12b-it"
+        model: "meta-llama/Llama-3.1-8B-Instruct"
        system_prompt: "You are a helpful assistant."
        max_tokens: 256
        temperature: 0.7
@@ -90,9 +110,9 @@ This project implements the mOrpheus Virtual Assistant, which integrates speech 
        max_response_time: 10.0
 
      tts:
-       endpoint: "/completions"
-       model: "orpheus-3b-ft.gguf@q2_k"
-       default_voice: "tara"
+        endpoint: "/audio/speech"
+        model: "parakeet-tts-0.3-multilingual"
+        default_voice: "alloy"
        max_tokens: 4096
        temperature: 0.6
        top_p: 0.9
@@ -118,7 +138,8 @@ This project implements the mOrpheus Virtual Assistant, which integrates speech 
    # Voice Activity Detection (VAD) Configuration
    # -------------------------------
    vad:
-     mode: 2
+      provider: "silero"
+      mode: 2
      frame_duration_ms: 30
      silence_threshold_ms: 1000
      min_record_time_ms: 2000
@@ -156,8 +177,10 @@ This project implements the mOrpheus Virtual Assistant, which integrates speech 
      post_audio_delay: 0.5
    ```
 
-4. **Run LM Studio**
-Before activating the assistant you need to have LM Studio running both the LLM and Orpheus model as defined in the settings.yml in API mode. This is only accessibly in Power User or Developer Mode respectively.
+4. **Run inference backends**
+Before activating the assistant, start:
+- a **vLLM** server exposing an OpenAI-compatible chat endpoint.
+- a **Parakeet TTS 0.3 multilingual** endpoint for synthesis.
 
 5. **Run the Assistant:**
 
@@ -166,26 +189,24 @@ Before activating the assistant you need to have LM Studio running both the LLM 
    ```
 
 
-## Suggested Models
+## Suggested Deployments
 
-These are the models I tested with, your milage may vary with additional models.
+These are suggested starting points; adjust based on your hardware and latency goals.
 
-**LLM Models:**
-- gemma-3-12b-it-GGUF/gemma-3-12b-it-Q3_K_L.gguf
+**LLM (vLLM):**
+- `meta-llama/Llama-3.1-8B-Instruct`
 
-**Orpheus Models:**
-- lex-au/Orpheus-3b-FT-Q2_K.gguf - Fastest inference (~50% faster tokens/sec than Q8_0).
-- lex-au/Orpheus-3b-FT-Q4_K_M.gguf - Balanced quality/speed.
-- lex-au/Orpheus-3b-FT-Q8_0.gguf - Original high-quality model.
+**TTS (Parakeet):**
+- `parakeet-tts-0.3-multilingual`
 
 ## Usage
 
 - **Activation:**  
   The assistant listens for activation either via a hotword ("Hey Assistant") or a push-to-talk keypress (or both, depending on your settings).  
 - **Speech Processing:**  
-  It records your speech, transcribes it using Whisper, and generates a text response via LM Studio’s chat API.
+  It records your speech, transcribes it using Whisper, gates speech regions with Silero VAD, and generates text via vLLM.
 - **TTS Synthesis:**  
-  The response is cleaned to remove unwanted characters (e.g., emojis, newlines, markdown formatting) and then sent to LM Studio’s TTS API. The SNAC-based decoder converts the TTS token stream into PCM audio.
+  The response is cleaned to remove unwanted characters (e.g., emojis, newlines, markdown formatting) and synthesized with Parakeet TTS 0.3 multilingual.
 - **Audio Playback:**  
   The generated audio is played back, and a brief delay is applied before the assistant waits for the next activation.
 

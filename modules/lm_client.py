@@ -127,6 +127,47 @@ class LMStudioClient:
 
         # Clean the text for TTS
         cleaned_text = clean_text_for_tts(text)
+        if not output_file:
+            timestamp = int(time.time())
+            output_file = f"outputs/{voice}_{timestamp}.wav"
+        os.makedirs("outputs", exist_ok=True)
+        url = self.api_url + self.tts_endpoint
+
+        if self.tts_endpoint == "/audio/speech":
+            payload = {
+                "model": self.tts_model,
+                "input": cleaned_text,
+                "voice": voice,
+                "response_format": "wav"
+            }
+            logger.debug("TTS request payload: %s", payload)
+            for attempt in range(self.retries):
+                try:
+                    response = self.session.post(
+                        url,
+                        headers=self.headers,
+                        json=payload,
+                        timeout=self.max_segment_duration + 5
+                    )
+                    if response.status_code != 200:
+                        logger.error("TTS API error: %s %s", response.status_code, response.text)
+                        if attempt < self.retries - 1:
+                            delay = 2 ** attempt
+                            logger.warning("TTS API error, retrying in %d seconds...", delay)
+                            time.sleep(delay)
+                            continue
+                        raise RuntimeError(f"TTS API error: {response.status_code} {response.text}")
+                    with open(output_file, "wb") as wf:
+                        wf.write(response.content)
+                    logger.info("Audio saved to %s", output_file)
+                    return output_file
+                except Exception as e:
+                    delay = 2 ** attempt
+                    logger.error("TTS synthesis failed (attempt %d): %s", attempt + 1, str(e))
+                    time.sleep(delay)
+                    if attempt == self.retries - 1:
+                        raise
+
         prompt = f"<|audio|>{voice}: {cleaned_text}<|eot_id|>"
         payload = {
             "model": self.tts_model,
@@ -138,7 +179,6 @@ class LMStudioClient:
             "speed": self.speed,
             "stream": True
         }
-        url = self.api_url + self.tts_endpoint
         logger.debug("TTS request payload: %s", payload)
         for attempt in range(self.retries):
             try:
@@ -174,10 +214,6 @@ class LMStudioClient:
                                     logger.error("JSON decode error: %s", e)
 
                 audio_bytes = tokens_decoder_sync(token_generator())
-                if not output_file:
-                    timestamp = int(time.time())
-                    output_file = f"outputs/{voice}_{timestamp}.wav"
-                os.makedirs("outputs", exist_ok=True)
                 with wave.open(output_file, "wb") as wf:
                     wf.setnchannels(1)
                     wf.setsampwidth(2)

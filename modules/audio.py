@@ -4,7 +4,7 @@ import time
 import wave
 import numpy as np
 import sounddevice as sd
-import webrtcvad
+import torch
 from scipy.io.wavfile import write as wav_write
 from modules.logging import logger
 
@@ -14,13 +14,24 @@ FRAME_DURATION_MS = 30
 SILENCE_THRESHOLD_MS = 1000
 MIN_RECORD_TIME_MS = 2000
 DEFAULT_MAX_WORDS_PER_SEGMENT = 60
+_SILERO_VAD_MODEL = None
+
+def _get_silero_vad_model():
+    global _SILERO_VAD_MODEL
+    if _SILERO_VAD_MODEL is None:
+        _SILERO_VAD_MODEL, _ = torch.hub.load(
+            repo_or_dir="snakers4/silero-vad",
+            model="silero_vad",
+            trust_repo=True
+        )
+    return _SILERO_VAD_MODEL
 
 def record_until_silence(sample_rate, device=None):
     """
     Records audio until a period of silence is detected.
     """
     try:
-        vad_inst = webrtcvad.Vad(VAD_MODE)
+        vad_model = _get_silero_vad_model()
         frame_length = int(sample_rate * FRAME_DURATION_MS / 1000)
         silence_frames = int(SILENCE_THRESHOLD_MS / FRAME_DURATION_MS)
         logger.info("Recording until %d ms of silence is detected...", SILENCE_THRESHOLD_MS)
@@ -31,8 +42,9 @@ def record_until_silence(sample_rate, device=None):
         with sd.InputStream(samplerate=sample_rate, channels=1, device=device, blocksize=frame_length) as stream:
             while True:
                 frame, _ = stream.read(frame_length)
-                frame_int16 = (np.squeeze(frame) * 32767).astype(np.int16).tobytes()
-                is_speech = vad_inst.is_speech(frame_int16, sample_rate)
+                frame_tensor = torch.from_numpy(np.squeeze(frame)).float()
+                speech_prob = vad_model(frame_tensor, sample_rate).item()
+                is_speech = speech_prob >= 0.5
                 recorded_frames.append(frame)
                 if not is_speech:
                     consecutive_silence += 1
